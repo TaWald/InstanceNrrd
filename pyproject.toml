@@ -1,0 +1,41 @@
+[build-system]
+requires = ["setuptools", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "toinstance"
+version = "0.0"
+authors = [{name = "Tassilo Wald", email = "tassilo.wald@dkfz-heidelberg.de"}]
+description = "Takes basic semantic segmentation and creates instances of it."
+dependencies = [
+    'numpy',
+    'scipy',
+    'scikit-image',
+    'SimpleITK'
+]
+
+
+readme = "README.md"
+requires-python = ">=3.10"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: GNU GENERAL PUBLIC LICENSE",
+]
+
+
+[tool.black]
+line-length = 118
+
+[project.urls]
+"Homepage" = "https://git.dkfz.de/mic/personal/group2/tassilow/sem2ins"
+
+[project.scripts]
+toinstance = "toinstance.predict:main"
+
+
+
+[tool.setuptools.dynamic]
+dependencies = {file = ["requirements.txt"]}
+
+# [project.scripts]
+# my-script = "sem2ins.scripts.evaluate:main"
