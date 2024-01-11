@@ -27,7 +27,7 @@ classifiers = [
 line-length = 118
 
 [project.urls]
-"Homepage" = "https://git.dkfz.de/mic/personal/group2/tassilow/sem2ins"
+"Homepage" = "https://git.dkfz.de/mic/personal/group2/all/toinstance"
 
 [project.scripts]
 toinstance = "toinstance.predict:main"

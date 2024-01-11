@@ -21,7 +21,6 @@ def run_connected_components(
     overwrite: bool = False,
 ):
     """Does connected component analysis on either the resampled or the raw data."""
-    samples = samples[:20]
     print("Creating Groundtruths intances.")
     partial_sem2ins = partial(
         create_instances_of_semantic_map,
