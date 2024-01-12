@@ -1,5 +1,5 @@
-SEMANTIC_SEG_TEMPLATE = "{}_sem{}"
-INSTANCE_SEG_TEMPLATE = "{}_inst{}"
+SEMANTIC_SEG_PATTERN = "__sem__"
+INSTANCE_SEG_PATTERN = "__ins__"
 
 # Acceptable extensions that SimpleITK can read
 # https://simpleitk.readthedocs.io/en/master/IO.html  Supported File Formats

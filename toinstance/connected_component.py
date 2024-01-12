@@ -9,7 +9,7 @@ from skimage import morphology as morph
 from tqdm import tqdm
 from tqdm.contrib.concurrent import process_map
 
-from toinstance.naming_conventions import INSTANCE_SEG_TEMPLATE, SEMANTIC_SEG_TEMPLATE
+from toinstance.naming_conventions import INSTANCE_SEG_PATTERN, SEMANTIC_SEG_PATTERN
 
 
 def run_connected_components(
@@ -62,8 +62,8 @@ def create_instances_of_semantic_map(
     # --------------------------- Prepare Writing Paths -------------------------- #
     sample_name = os.path.basename(semantic_seg_path)
     case_id = sample_name.split(".")[0]
-    instance_name = INSTANCE_SEG_TEMPLATE.format(case_id, ".nii.gz")
-    semantic_name = SEMANTIC_SEG_TEMPLATE.format(case_id, ".nii.gz")
+    instance_name = case_id + INSTANCE_SEG_PATTERN + ".nii.gz"
+    semantic_name = case_id + SEMANTIC_SEG_PATTERN + ".nii.gz"
     instance_output_path = output_path / instance_name
     semantic_output_path = output_path / semantic_name
 
