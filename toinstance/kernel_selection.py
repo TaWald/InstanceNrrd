@@ -1,4 +1,5 @@
 from enum import Enum
+from typing import Callable
 from skimage import morphology as morph
 import numpy as np
 
@@ -6,7 +7,7 @@ import numpy as np
 kernel_choices = ["ball", "cube", "diamond", "octahedron", "none"]
 
 
-def get_kernel_from_str(kernel: str) -> callable[[int, np.dtype], np.ndarray] | None:
+def get_kernel_from_str(kernel: str) -> Callable[[int, np.dtype], np.ndarray] | None:
     """
     Takes a string and returns the corresponding Kernel ENUM.
     """
@@ -23,7 +24,7 @@ def get_kernel_from_str(kernel: str) -> callable[[int, np.dtype], np.ndarray] | 
 
 
 def get_np_arr_from_kernel(
-    kernel: callable[[int, np.dtype], np.ndarray] | None, radius: int = 3, dtype: np.dtype = np.uint8
+    kernel: Callable[[int, np.dtype], np.ndarray] | None, radius: int = 3, dtype: np.dtype = np.uint8
 ):
     """
     Takes the Kernel ENUM containing functions and creates the actual numpy kernel.
