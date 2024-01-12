@@ -1,5 +1,6 @@
 from argparse import ArgumentParser
 from pathlib import Path
+from warnings import warn
 from toinstance.connected_component import run_connected_components
 from toinstance.kernel_selection import Kernel, get_np_arr_from_kernel
 
@@ -23,6 +24,10 @@ def create_instance(
         all_files = get_readable_images_from_dir(input_path)
     else:
         all_files = [input_path]
+    if len(all_files) == 0:
+        warn(f"No files found in {input_path}")
+        return
+    print(f"Found {len(all_files)} files to process.")
     if not output_dir.exists():
         output_dir.mkdir(parents=True)
     dilation_kernel = get_np_arr_from_kernel(dilation_kernel, radius=dilation_kernel_radius, dtype=np.uint8)
