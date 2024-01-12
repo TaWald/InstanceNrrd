@@ -2,7 +2,7 @@ from argparse import ArgumentParser
 from pathlib import Path
 from warnings import warn
 from toinstance.connected_component import run_connected_components
-from toinstance.kernel_selection import Kernel, get_np_arr_from_kernel
+from toinstance.kernel_selection import kernel_choices, get_kernel_from_str, get_np_arr_from_kernel
 
 from toinstance.utils import get_readable_images_from_dir
 import numpy as np
@@ -11,9 +11,9 @@ import numpy as np
 def create_instance(
     input_path: Path,
     output_dir: Path,
-    label_connectivity: int,
-    dilation_kernel: Kernel | None,
-    dilation_kernel_radius: int,
+    label_connectivity: int = 2,
+    dilation_kernel: str | None = "ball",
+    dilation_kernel_radius: int = 3,
     processes: int = 1,
     overwrite: bool = False,
 ):
@@ -30,7 +30,8 @@ def create_instance(
     print(f"Found {len(all_files)} files to process.")
     if not output_dir.exists():
         output_dir.mkdir(parents=True)
-    dilation_kernel = get_np_arr_from_kernel(dilation_kernel, radius=dilation_kernel_radius, dtype=np.uint8)
+    dk = get_kernel_from_str(dilation_kernel)
+    dilation_kernel = get_np_arr_from_kernel(dk, radius=dilation_kernel_radius, dtype=np.uint8)
     run_connected_components(all_files, output_dir, dilation_kernel, label_connectivity, processes, overwrite)
 
 
@@ -60,9 +61,9 @@ def main():
     parser.add_argument(
         "-dk",
         "--dilation_kernel",
-        type=Kernel,
-        choices=list(Kernel),
-        default=Kernel.ball,
+        type=str,
+        choices=kernel_choices,
+        default="ball",
         required=False,
         help="Dilation kernel",
     )
