@@ -1,5 +1,5 @@
-# Simple Instance
-This is a small repo to convert your 3D semantic instance segmentations into instance masks.
+# ToInstance
+This is a small repo to convert your 3D semantic instance segmentations into instance masks through connected component analysis. It is meant to be used in conjunction with `nneval` which will be available soon.
 You pass a path to an image or dir containing images `<some_path>/<some_semantic_seg_file_id>.nii.gz` and
  it creates instances outputting each file into two new files:
 - `<some_path>/<some_semantic_seg_file_id>_sem.nii.gz` - The same semantic segmentation map (What it got as input) 
@@ -7,6 +7,12 @@ You pass a path to an image or dir containing images `<some_path>/<some_semantic
 By doing so it can be easily introspected side-by-side with the semantic map in a 3D image viewer.
 
 ## Installation
+
+Either via pip or by cloning the repo and installing it locally:
+```bash
+pip install toinstance
+```
+
 ```bash
 git clone
 cd toinstance
@@ -15,14 +21,14 @@ pip install -e .
 
 ## Usage
 ### CLI
-To use you from the CLI you can call `toinstance`:
+You can use it from the CLI by calling the `toinstance` command:
 
 ```bash
 # Convert a file or a dir to instance segmentations
 toinstance -i <path_to_file_or_dir_with_files> -o <path_to_output_dir>
 ```
 
-Moreover you can specify the following arguments:`
+Moreover you can specify the following arguments:
  - `"-lc", "--label_connectivity"` - The connectivity for the connected components can be `[1, 2, 3]` --  1: only face 2: face and edge 3: face, edge, and corner 
  - `"-dk", "--dilation_kernel"` - Can be used pre-labeling to dilate the semantic map and allow connecting close-by points even without corner neighbourhood. Can be `["ball", "cube", "diamond", "octahedron"]`
  - `"-dkr", "--dilation_kernel_radius"` - The radius of the dilation kernel. Larger Kernels merges instances that are further away -- (Integer) Voxel radius of the kernel
