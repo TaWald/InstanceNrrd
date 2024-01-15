@@ -8,10 +8,10 @@ version = "0.0"
 authors = [{name = "Tassilo Wald", email = "tassilo.wald@dkfz-heidelberg.de"}]
 description = "Takes basic semantic segmentation (e.g. output of nnU-Net) and creates instances of it."
 dependencies = [
-    'numpy',
-    'scipy',
-    'scikit-image',
-    'SimpleITK'
+    'nibabel~=5.2.0',
+    'numpy~=1.26.3',
+    'scikit-image~=0.21.0',
+    'SimpleITK==2.2.1'
 ]
 
 
