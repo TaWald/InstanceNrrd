@@ -19,7 +19,7 @@ def run_connected_components(
     label_connectivity: int,
     n_processes: int = 1,
     overwrite: bool = False,
-):
+) -> list[tuple[Path, Path]]:
     """Does connected component analysis on either the resampled or the raw data."""
     print("Creating Groundtruths intances.")
     partial_sem2ins = partial(
@@ -30,10 +30,10 @@ def run_connected_components(
         overwrite=overwrite,  # Maybe unnecessary?
     )
     if n_processes == 1:
-        [partial_sem2ins(sample) for sample in tqdm(samples)]
+        converted_files = [partial_sem2ins(sample) for sample in tqdm(samples)]
     else:
-        process_map(partial_sem2ins, samples, max_workers=n_processes)
-    return
+        converted_files = process_map(partial_sem2ins, samples, max_workers=n_processes)
+    return converted_files  # Return the paths to the created instances
 
 
 def create_instances_of_semantic_map(
@@ -42,7 +42,7 @@ def create_instances_of_semantic_map(
     dilation_kernel: np.ndarray | None,
     label_connectivity: int,
     overwrite: bool = False,
-) -> None:
+) -> tuple[Path, Path]:
     """Creates the label of the groundtruth by doing a connected components analysis (only on the CE).
 
     :param training_data: Path to sample sample
@@ -103,4 +103,4 @@ def create_instances_of_semantic_map(
 
     sitk.WriteImage(output_prediction_1, instance_output_path)
     shutil.copy(semantic_seg_path, semantic_output_path)
-    return
+    return (semantic_output_path, instance_output_path)

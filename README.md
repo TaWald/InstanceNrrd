@@ -24,20 +24,20 @@ toinstance -i <path_to_file_or_dir_with_files> -o <path_to_output_dir>
 
 Moreover you can specify the following arguments:`
  - `"-lc", "--label_connectivity"` - The connectivity for the connected components can be `[1, 2, 3]` --  1: only face 2: face and edge 3: face, edge, and corner 
- - `"-dk", "--dilation_kernel"` - Can be used per-labeling to dilate foreground and allow connecting close-by points even without corner neighbourhood. Can be `["ball", "cube", "diamond", "octahedron"]`
- - `"-dkr", "--dilation_kernel_radius"` - The radius of the dilation kernel -- (Integer) specifying the voxel radius of the kernel
+ - `"-dk", "--dilation_kernel"` - Can be used pre-labeling to dilate the semantic map and allow connecting close-by points even without corner neighbourhood. Can be `["ball", "cube", "diamond", "octahedron"]`
+ - `"-dkr", "--dilation_kernel_radius"` - The radius of the dilation kernel. Larger Kernels merges instances that are further away -- (Integer) Voxel radius of the kernel
  - `"-p", "--processes"` - The number of processes to use for multiprocessing -- (Integer) specifying the number of processes to use
  - `"-f", "--force_overwrite` - Whether to force overwrite existing files -- (Boolean) specifying whether to force overwrite existing files
 
 This info can also be found by calling `toinstance --help`.
 
 ### API
-
+If you want you can also start the conversion from within python directly:
 
 ```python
-from sem2ins.predict import file2instance, dir2instance
-file2instance -i <path_to_file>.nii.gz -o <path_to_output_dir>
-# Convert a directory of files to instance segmentation
-dir2instance -i <path_to_dir> -o <path_to_output_dir>
+from sem2ins.predict import create_instance
+# Converts either a single or all files in a directory to instances.
+output_paths = create_instance(input_path=..., output_path= ...)
+# Output paths contains list[tuple[Path, Path]] where the first path is the semantic segmentation and the second the instance segmentation.
 ```
 

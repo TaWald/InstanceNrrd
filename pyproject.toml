@@ -6,7 +6,7 @@ build-backend = "setuptools.build_meta"
 name = "toinstance"
 version = "0.0"
 authors = [{name = "Tassilo Wald", email = "tassilo.wald@dkfz-heidelberg.de"}]
-description = "Takes basic semantic segmentation and creates instances of it."
+description = "Takes basic semantic segmentation (e.g. output of nnU-Net) and creates instances of it."
 dependencies = [
     'numpy',
     'scipy',
@@ -20,6 +20,7 @@ requires-python = ">=3.10"
 classifiers = [
     "Programming Language :: Python :: 3",
     "License :: GNU GENERAL PUBLIC LICENSE",
+    "Operating System :: OS Independent",
 ]
 
 

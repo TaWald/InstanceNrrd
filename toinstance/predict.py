@@ -16,9 +16,11 @@ def create_instance(
     dilation_kernel_radius: int = 3,
     processes: int = 1,
     overwrite: bool = False,
-):
+) -> list[tuple[Path, Path]]:
     """
-    Turns a single segmentation file into instances
+    Either convert a single segmentation or multiple segmentations in a directory into instances.
+    Instances are written to disk in the output_dir. They are split into semantic segmentation and instances,
+    for easy visibility in a viewer.
     """
     if input_path.is_dir():
         all_files = get_readable_images_from_dir(input_path)
@@ -32,7 +34,7 @@ def create_instance(
         output_dir.mkdir(parents=True)
     dk = get_kernel_from_str(dilation_kernel)
     dilation_kernel = get_np_arr_from_kernel(dk, radius=dilation_kernel_radius, dtype=np.uint8)
-    run_connected_components(all_files, output_dir, dilation_kernel, label_connectivity, processes, overwrite)
+    return run_connected_components(all_files, output_dir, dilation_kernel, label_connectivity, processes, overwrite)
 
 
 def main():
