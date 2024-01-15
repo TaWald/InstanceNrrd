@@ -41,3 +41,10 @@ output_paths = create_instance(input_path=..., output_path= ...)
 # Output paths contains list[tuple[Path, Path]] where the first path is the semantic segmentation and the second the instance segmentation.
 ```
 
+### Current Limitations
+- Currently only supports `.nii.gz` / `.nrrd` files (But can be easily extended to support more)
+- Currently only supports 3D semantic segmentation maps (But can be easily extended to support more)
+
+This is a small repo that currently only serves to keep instance creation from semantic segmentation maps simple and easy to use. It is not meant to be a full fledged library (yet) and just keeps the instance generation outside of the `nneval` repository. 
+
+If you want to extend the functionality of this, feel free to open a PR. 
