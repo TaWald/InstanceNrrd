@@ -21,9 +21,9 @@
             "justMyCode": true,
             "args": [
                 "-i",
-                "/home/tassilowald/Data/Dev/labelsTr",
+                "/home/tassilowald/Code/nneval/tests/sem_test_data/multi_class/preds",
                 "-o",
-                "/home/tassilowald/Data/Dev/instanceTr",
+                "/home/tassilowald/Code/nneval/tests/ins_test_data/multi_class/preds",
                 "-p",
                 "24"
             ]
