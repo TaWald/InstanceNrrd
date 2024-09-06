@@ -4,10 +4,13 @@ import shutil
 from pathlib import Path
 import numpy as np
 import SimpleITK as sitk
+import tempfile
 import os
 from skimage import morphology as morph
+import nrrd
 from tqdm import tqdm
 from tqdm.contrib.concurrent import process_map
+from toinstance.utils import create_mitk_nrrd
 
 from toinstance.naming_conventions import INSTANCE_SEG_PATTERN, SEMANTIC_SEG_PATTERN
 
@@ -42,7 +45,7 @@ def create_instances_of_semantic_map(
     dilation_kernel: np.ndarray | None,
     label_connectivity: int,
     overwrite: bool = False,
-) -> tuple[Path, Path]:
+) -> Path:
     """Creates the label of the groundtruth by doing a connected components analysis (only on the CE).
 
     :param training_data: Path to sample sample
@@ -74,7 +77,7 @@ def create_instances_of_semantic_map(
 
     # ------------------------ Start creation of instances ----------------------- #
     unique_classes = np.unique(semantic_array)
-    instance_arr = np.zeros_like(semantic_array).astype(np.int32)
+    class_wise_instances: dict[str, np.ndarray] = {}
     max_inst_id = 0
     for unique_class_id in unique_classes:
         if unique_class_id == 0:
@@ -91,16 +94,20 @@ def create_instances_of_semantic_map(
             return_num=True,
             connectivity=label_connectivity,
         )
-        instance_id_label = (bin_ce_res_pd_np * (label_ce + max_inst_id)).astype(np.int32)
-        instance_arr += instance_id_label
+        instance_id_label = (bin_ce_res_pd_np * (label_ce + max_inst_id)).astype(np.uint16)
+        class_wise_instances[unique_class_id] = instance_id_label
         max_inst_id += max_id
 
-    # ---------------------------------- Writing --------------------------------- #
-    output_prediction_1 = sitk.GetImageFromArray(instance_arr)
+    # ---------------------------------- Get Meta info from Semantic --------------------------------- #
+    output_prediction_1 = sitk.GetImageFromArray(semantic_seg_im)
     output_prediction_1.SetOrigin(semantic_seg_im.GetOrigin())
     output_prediction_1.SetDirection(semantic_seg_im.GetDirection())
     output_prediction_1.SetSpacing(semantic_seg_im.GetSpacing())
 
-    sitk.WriteImage(output_prediction_1, instance_output_path)
-    shutil.copy(semantic_seg_path, semantic_output_path)
-    return (semantic_output_path, instance_output_path)
+    # ------------------------ Create MITK compatible nrrd ----------------------- #
+    with open(tempfile.TemporaryDirectory(), "w") as tmpdir:
+        sitk.WriteImage(output_prediction_1, tmpdir + "/tmp.nrrd")
+        _, header = nrrd.read(tmpdir + "/tmp.nrrd")
+    nrrd_arr, nrrd_header =create_mitk_nrrd(class_wise_instances, header)
+    nrrd.write(str(instance_output_path), nrrd_arr, nrrd_header)
+    return instance_output_path
