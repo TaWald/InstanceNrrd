@@ -22,7 +22,7 @@ def run_connected_components(
     label_connectivity: int,
     n_processes: int = 1,
     overwrite: bool = False,
-) -> list[tuple[Path, Path]]:
+) -> list[Path]:
     """Does connected component analysis on either the resampled or the raw data."""
     print("Creating Groundtruths intances.")
     partial_sem2ins = partial(
@@ -108,6 +108,6 @@ def create_instances_of_semantic_map(
     with open(tempfile.TemporaryDirectory(), "w") as tmpdir:
         sitk.WriteImage(output_prediction_1, tmpdir + "/tmp.nrrd")
         _, header = nrrd.read(tmpdir + "/tmp.nrrd")
-    nrrd_arr, nrrd_header =create_mitk_nrrd(class_wise_instances, header)
+    nrrd_arr, nrrd_header = create_mitk_nrrd(class_wise_instances, header)
     nrrd.write(str(instance_output_path), nrrd_arr, nrrd_header)
     return instance_output_path
