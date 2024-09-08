@@ -279,3 +279,33 @@ class InstanceNrrd:
         """
         array, header = nrrd.read(filepath)
         return InstanceNrrd(array, header)
+
+    def get_spacing(self) -> list[list[float]]:
+        """
+        Get the spacing of the instance map.
+        """
+        return self.header["space directions"][1:]
+
+    def set_spacing(self, spacing: list[list[float]]):
+        """
+        Set the spacing of the instance map.
+        """
+        self.header["space directions"] = [None] + spacing
+
+    def get_origin(self) -> list[float]:
+        """
+        Get the origin of the instance map.
+        """
+        return self.header["space origin"]
+
+    def set_origin(self, origin: list[float]):
+        """
+        Set the origin of the instance map.
+        """
+        self.header["space origin"] = origin
+
+    def get_size(self) -> list[int]:
+        """
+        Get the size of the instance map.
+        """
+        return self.header["sizes"][1:]
