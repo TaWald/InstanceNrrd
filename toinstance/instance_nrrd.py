@@ -125,7 +125,7 @@ class InstanceNrrd:
         assert (
             "org.mitk.multilabel.segmentation.labelgroups" in self.header
         ), "org.mitk.multilabel.segmentation.labelgroups"
-        if self.array.shape[0] > 1:
+        if len(self.header["org.mitk.multilabel.segmentation.labelgroups"]) != 0:
             assert (
                 len(self.header["org.mitk.multilabel.segmentation.labelgroups"]) == self.array.shape[0]
             ), "Number of groups in header and array do not match."
