@@ -54,6 +54,11 @@ def create_instance_map_of_semantic_map(semantic_array: np.ndarray, cc_kwargs: d
         for i in range(1, max_id + 1):
             class_wise_bin_maps.append((label_ce == i).astype(np.uint16))
         class_wise_instances[unique_class_id] = class_wise_bin_maps
+
+    total_instances = sum([len(v) for v in class_wise_instances.values()])
+    if total_instances == 0:
+        # Create an empty instance map if no instances are found. Otherwise stuff breaks.
+        class_wise_instances = {"0": [np.zeros_like(semantic_array)]}
     return class_wise_instances
 
 
@@ -183,30 +188,38 @@ class InstanceNrrd:
         final_arr = []
         lesion_header = []
         cnt = 1
-        for class_name, instance_maps in classwise_bin_maps.items():
-            for instance_map in instance_maps:
-                lesion_header.append(
-                    {
-                        "labels": [
-                            {
-                                "color": {"type": "ColorProperty", "value": TAB20[(cnt - 1) % 20]},
-                                "locked": True,
-                                "name": f"{class_name}",
-                                "opacity": 0.6,
-                                "value": cnt,
-                                "visible": True,
-                            }
-                        ]
-                    }
-                )
-                final_arr.append(instance_map * cnt)
-                cnt += 1
-        final_arr = np.stack(final_arr, axis=0)
+
+        # Indicator that there is no foreground at all
+        if "0" in classwise_bin_maps:
+            # If there is no foreground, we just return an empty instance map
+            final_arr = np.stack(classwise_bin_maps["0"], axis=0)
+        else:
+            for class_name, instance_maps in classwise_bin_maps.items():
+                for instance_map in instance_maps:
+                    lesion_header.append(
+                        {
+                            "labels": [
+                                {
+                                    "color": {"type": "ColorProperty", "value": TAB20[(cnt - 1) % 20]},
+                                    "locked": True,
+                                    "name": f"{class_name}",
+                                    "opacity": 0.6,
+                                    "value": cnt,
+                                    "visible": True,
+                                }
+                            ]
+                        }
+                    )
+                    final_arr.append(instance_map * cnt)
+                    cnt += 1
+            final_arr = np.stack(final_arr, axis=0)
+
         # ---------------- Set the header in accordance to MITK format --------------- #
         header["org.mitk.multilabel.segmentation.labelgroups"] = lesion_header
         header["type"] = "unsigned short"
-        header["dimension"] = instance_map.ndim + 1
-        header["sizes"] = [len(lesion_header)] + list(instance_map.shape)
+        header["sizes"] = list(final_arr.shape)
+        header["dimension"] = final_arr.ndim
+
         space_dirs = header["space directions"]
 
         # Check if the image header already is in.nrrd
@@ -240,7 +253,7 @@ class InstanceNrrd:
 
         :param semantic_map: Semantic map
         :param header: Nrrd header
-        :param do_cc: Whether to perform connected components analysis -- Otherwise whole semantic map is considered one instance.
+        :param do_cc: Whether to perform connected components analysis -- Otherwise each value is one instance..
         :param cc_kwargs: Keyword arguments for connected components analysis. (`dilation_kernel`: {get_args(kernel_choices)}, `label_connectivity`: [1, 2, 3], `dilation_kernel_radius`: int)
         """
         instance_dict: dict[str, list[np.ndarray]]
@@ -251,6 +264,18 @@ class InstanceNrrd:
             for class_name in np.unique(semantic_map):
                 instance_dict[str(class_name)] = [semantic_map == class_name]
         return InstanceNrrd.from_binary_instance_maps(instance_dict, header)
+
+    @staticmethod
+    def from_instance_map(instance_map: np.ndarray, header: dict, class_name: str) -> "InstanceNrrd":
+        """
+        Creates an InstanceNrrd object from an instance map.
+
+        :param instance_map: Instance map, where each value is an instance.
+        :param header: Nrrd header
+        :param class_name: Class name all instances belong to.
+        """
+        bin_maps = [(instance_map == i).astype(np.uint16) for i in np.unique(instance_map)]
+        return InstanceNrrd.from_binary_instance_maps({class_name: bin_maps}, header)
 
     @staticmethod
     def from_semantic_img(
