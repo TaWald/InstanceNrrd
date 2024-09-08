@@ -1,10 +1,10 @@
 from enum import Enum
-from typing import Callable
+from typing import Callable, Literal
 from skimage import morphology as morph
 import numpy as np
 
 
-kernel_choices = ["ball", "cube", "diamond", "octahedron", "none"]
+kernel_choices = Literal["ball", "cube", "diamond", "octahedron", "none"]
 
 
 def get_kernel_from_str(kernel: str) -> Callable[[int, np.dtype], np.ndarray] | None:

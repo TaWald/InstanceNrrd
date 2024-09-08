@@ -12,7 +12,7 @@ def create_instance(
     input_path: Path,
     output_dir: Path,
     label_connectivity: int = 2,
-    dilation_kernel: str | None = "ball",
+    dilation_kernel: kernel_choices | None = "ball",
     dilation_kernel_radius: int = 3,
     processes: int = 1,
     overwrite: bool = False,

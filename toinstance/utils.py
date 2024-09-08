@@ -27,44 +27,6 @@ TAB20 = [
 ]
 
 
-def create_mitk_nrrd(nrrd_arrs: dict[str, np.ndarray], nrrd_header: dict) -> tuple[np.ndarray, dict]:
-    """Add MITK header information to the nrrd header.
-    Allows visualizing the nrrd image nicely in MITK."""
-    # ------------------------- Edit basic headers ------------------------- #
-    nrrd_header["dimension"] += 1
-    nrrd_header["type"] = "unsigned short"
-    nrrd_header["sizes"] = [len(nrrd_arr)] + nrrd_header["sizes"]
-    nrrd_header["space directions"] = [None] + nrrd_header["space directions"].tolist()
-    nrrd_header["kinds"] = ["vector"] + nrrd_header["kinds"]
-    nrrd_header["encoding"] = "gzip"
-    # --------------------------- MITK Specific Headers -------------------------- #
-    nrrd_header["modality"] = "org.mitk.multilabel.segmentation"
-
-    lesion_header = []
-    cnt = 1
-    # There may be overlap or no overlap between the lesions.
-    #   If there is overlap, another channel will be created.
-    for class_name, nrrd_arr in nrrd_arrs.items():
-        lesion_header.append(
-            {
-                "labels": [
-                    {
-                        "color": {"type": "ColorProperty", "value": TAB20[(cnt - 1) % 20]},
-                        "locked": True,
-                        "name": f"Class {class_name}",
-                        "opacity": 0.6,
-                        "value": cnt,
-                        "visible": True,
-                    }
-                ]
-            }
-        )
-        cnt += 1
-    nrrd_header["org.mitk.multilabel.segmentation.labelgroups"] = json.dumps(lesion_header)
-    nrrd_header["org.mitk.multilabel.segmentation.unlabeledlabellock"] = 0
-    nrrd_header["org.mitk.multilabel.segmentation.version"] = 1
-    mitk_compatible_arr = np.stack(nrrd_arrs, axis=0)
-    return mitk_compatible_arr, nrrd_header
 
 
 def get_readable_images_from_dir(dir_path: Path) -> list[Path]:
