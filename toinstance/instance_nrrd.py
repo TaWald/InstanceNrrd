@@ -50,6 +50,8 @@ def create_instance_map_of_semantic_map(semantic_array: np.ndarray, cc_kwargs: d
             return_num=True,
             connectivity=label_connectivity,
         )
+        # Remove the dilation from the label map
+        label_ce = bin_ce_res_pd_np * label_ce
         for i in range(1, max_id + 1):
             class_wise_bin_maps.append((label_ce == i).astype(np.uint16))
         class_wise_instances[int(unique_class_id)] = class_wise_bin_maps
