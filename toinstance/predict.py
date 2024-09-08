@@ -1,4 +1,5 @@
 from argparse import ArgumentParser
+from inspect import getargs
 from pathlib import Path
 from warnings import warn
 from toinstance.connected_component import run_connected_components
@@ -64,7 +65,7 @@ def main():
         "-dk",
         "--dilation_kernel",
         type=str,
-        choices=kernel_choices,
+        choices=getargs(kernel_choices),
         default="ball",
         required=False,
         help="Dilation kernel",
