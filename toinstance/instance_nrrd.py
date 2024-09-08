@@ -223,7 +223,7 @@ class InstanceNrrd:
         space_dirs = header["space directions"]
 
         # Check if the image header already is in.nrrd
-        if len(header["kinds"]) == instance_map.ndim:
+        if len(header["kinds"]) == final_arr.ndim:
             # Header not in in.nrrd format, so we need to pre-pend stuff to edit general header infos.
             if isinstance(space_dirs, np.ndarray):
                 space_dirs = space_dirs.tolist()
