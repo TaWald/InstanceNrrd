@@ -13,7 +13,7 @@ from toinstance.utils import TAB20
 from skimage import morphology as morph
 
 
-def create_instance_map_of_semantic_map(semantic_array: np.ndarray, cc_kwargs: dict) -> dict[str, list[np.ndarray]]:
+def create_instance_map_of_semantic_map(semantic_array: np.ndarray, cc_kwargs: dict) -> dict[int, list[np.ndarray]]:
     f"""
     Transform a semantic map into an instance map through connected components analysis.
     :param semantic_array: Semantic map
@@ -34,7 +34,7 @@ def create_instance_map_of_semantic_map(semantic_array: np.ndarray, cc_kwargs: d
     dk = get_kernel_from_str(dilation_kernel)
     dilation_kernel = get_np_arr_from_kernel(dk, radius=dilation_kernel_radius, dtype=np.uint8)
 
-    class_wise_instances: dict[str, list[np.ndarray]] = {}
+    class_wise_instances: dict[int, list[np.ndarray]] = {}
     for unique_class_id in np.unique(semantic_array):
         if unique_class_id == 0:
             continue  # Ignore background
@@ -53,12 +53,12 @@ def create_instance_map_of_semantic_map(semantic_array: np.ndarray, cc_kwargs: d
         )
         for i in range(1, max_id + 1):
             class_wise_bin_maps.append((label_ce == i).astype(np.uint16))
-        class_wise_instances[unique_class_id] = class_wise_bin_maps
+        class_wise_instances[int(unique_class_id)] = class_wise_bin_maps
 
     total_instances = sum([len(v) for v in class_wise_instances.values()])
     if total_instances == 0:
         # Create an empty instance map if no instances are found. Otherwise stuff breaks.
-        class_wise_instances = {"0": [np.zeros_like(semantic_array)]}
+        class_wise_instances = {0: [np.zeros_like(semantic_array)]}
     return class_wise_instances
 
 
@@ -146,36 +146,36 @@ class InstanceNrrd:
 
         return all_class_names
 
-    def get_instance_values_of_semantic_class(self, class_name: str) -> set[int]:
+    def get_instance_values_of_semantic_class(self, class_id: int) -> set[int]:
         """Return all instance values of a semantic class"""
         instance_values = set()
         for groups in self.header["org.mitk.multilabel.segmentation.labelgroups"]:
             for label in groups["labels"]:
-                if label["name"] == class_name:
+                if int(label["name"]) == class_id:
                     instance_values.add(label["value"])
         return instance_values
 
-    def get_semantic_map(self, class_name: str) -> np.ndarray:
+    def get_semantic_map(self, class_id: int) -> np.ndarray:
         """Return the semantic map of a specific class as binary map."""
-        instance_values = self.get_instance_values_of_semantic_class(class_name)
+        instance_values = self.get_instance_values_of_semantic_class(class_id)
         semantic_map = np.sum(np.isin(self.array, instance_values), axis=0)
         return semantic_map
 
     @lru_cache
-    def get_instance_maps(self, class_name: str) -> list[np.ndarray]:
+    def get_instance_maps(self, class_id: int) -> list[np.ndarray]:
         """Return all instance maps of a specific class."""
-        instance_values = self.get_instance_values_of_semantic_class(class_name)
+        instance_values = self.get_instance_values_of_semantic_class(class_id)
         instance_maps = [np.sum(self.array == iv, axis=0) for iv in instance_values]
         return instance_maps
 
-    def get_semantic_instance_maps(self) -> dict[str, list[np.ndarray]]:
+    def get_semantic_instance_maps(self) -> dict[int, list[np.ndarray]]:
         """Return all semantic classes with their instance maps."""
         semantic_instance_maps = {}
-        for class_name in self.semantic_classes():
-            semantic_instance_maps[class_name] = self.get_instance_maps(class_name)
+        for class_id in self.semantic_classes():
+            semantic_instance_maps[class_id] = self.get_instance_maps(class_id)
         return semantic_instance_maps
 
-    def _update_array(self, instance_dict: dict[str, list[np.ndarray]] = None):
+    def _update_array(self, instance_dict: dict[int, list[np.ndarray]] = None):
         """Updates the array with the new instance values."""
 
         self.array.setflags(write=True)
@@ -190,7 +190,7 @@ class InstanceNrrd:
 
     @staticmethod
     def _arr_header_update_from_binmaps(
-        classwise_bin_maps: dict[str, list[np.ndarray]], header: dict
+        classwise_bin_maps: dict[int, list[np.ndarray]], header: dict
     ) -> tuple[np.ndarray, dict]:
         """Create an np.ndarray and an mitk compatible header from the instance maps."""
         final_arr = []
@@ -198,12 +198,12 @@ class InstanceNrrd:
         cnt = 1
 
         # Indicator that there is no foreground at all
-        if "0" in classwise_bin_maps:
+        if 0 in classwise_bin_maps:
             # If there is no foreground, we just return an empty instance map
             final_arr = classwise_bin_maps["0"][0]
             header["innrrd.empty"] = 1
         else:
-            for class_name, instance_maps in classwise_bin_maps.items():
+            for class_id, instance_maps in classwise_bin_maps.items():
                 for instance_map in instance_maps:
                     lesion_header.append(
                         {
@@ -211,7 +211,7 @@ class InstanceNrrd:
                                 {
                                     "color": {"type": "ColorProperty", "value": TAB20[(cnt - 1) % 20]},
                                     "locked": True,
-                                    "name": f"{class_name}",
+                                    "name": f"{int(class_id)}",
                                     "opacity": 0.6,
                                     "value": cnt,
                                     "visible": True,
@@ -250,7 +250,7 @@ class InstanceNrrd:
         return final_arr, header
 
     @staticmethod
-    def from_binary_instance_maps(instance_dict: dict[str, list[np.ndarray]], header: dict) -> "InstanceNrrd":
+    def from_binary_instance_maps(instance_dict: dict[int, list[np.ndarray]], header: dict) -> "InstanceNrrd":
         """
         Creates an InstanceNrrd object from a dictionary from a dictionary holding all instances for each semantic class.
         """
@@ -269,13 +269,13 @@ class InstanceNrrd:
         :param do_cc: Whether to perform connected components analysis -- Otherwise each value is one instance..
         :param cc_kwargs: Keyword arguments for connected components analysis. (`dilation_kernel`: {get_args(kernel_choices)}, `label_connectivity`: [1, 2, 3], `dilation_kernel_radius`: int)
         """
-        instance_dict: dict[str, list[np.ndarray]]
+        instance_dict: dict[int, list[np.ndarray]]
         if do_cc:
             instance_dict = create_instance_map_of_semantic_map(semantic_map, cc_kwargs)
         else:
             instance_dict = {}
-            for class_name in np.unique(semantic_map):
-                instance_dict[str(class_name)] = [semantic_map == class_name]
+            for class_id in np.unique(semantic_map):
+                instance_dict[int(class_id)] = [semantic_map == class_id]
         return InstanceNrrd.from_binary_instance_maps(instance_dict, header)
 
     @staticmethod
