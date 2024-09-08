@@ -316,6 +316,9 @@ class InstanceNrrd:
         :param filepath: Path to the instance `.in.nrrd`.
         """
         array, header = nrrd.read(filepath)
+        header["org.mitk.multilabel.segmentation.labelgroups"] = json.loads(
+            header.get("org.mitk.multilabel.segmentation.labelgroups", "[]")
+        )
         return InstanceNrrd(array, header)
 
     def get_spacing(self) -> list[list[float]]:
