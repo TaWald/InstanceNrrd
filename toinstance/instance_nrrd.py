@@ -125,9 +125,10 @@ class InstanceNrrd:
         assert (
             "org.mitk.multilabel.segmentation.labelgroups" in self.header
         ), "org.mitk.multilabel.segmentation.labelgroups"
-        assert (
-            len(self.header["org.mitk.multilabel.segmentation.labelgroups"]) == self.array.shape[0]
-        ), "Number of groups in header and array do not match."
+        if self.array.shape[0] > 1:
+            assert (
+                len(self.header["org.mitk.multilabel.segmentation.labelgroups"]) == self.array.shape[0]
+            ), "Number of groups in header and array do not match."
 
     def semantic_classes(self) -> set[str]:
         """Return all semantic classes in the nrrd file."""
