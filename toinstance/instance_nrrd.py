@@ -226,7 +226,7 @@ class InstanceNrrd:
         header["org.mitk.multilabel.segmentation.version"] = 1
 
         # Check if the image header already is in.nrrd
-        if len(lesion_header) != 0:
+        if not header.get("innrrd", False):
             space_dirs = header["space directions"]
             # Header not in in.nrrd format, so we need to pre-pend stuff to edit general header infos.
             if isinstance(space_dirs, np.ndarray):
@@ -235,6 +235,7 @@ class InstanceNrrd:
                 header["space directions"] = [None] + list(space_dirs)  # Make sure it's a list
             if header["kinds"][0] != "vector":
                 header["kinds"] = ["vector"] + header["kinds"]
+        header["innrrd"] = True
 
         return final_arr, header
 
