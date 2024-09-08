@@ -6,7 +6,6 @@ import nrrd
 import numpy as np
 import SimpleITK as sitk
 import tempfile
-from functools import lru_cache
 
 from toinstance.kernel_selection import get_kernel_from_str, get_np_arr_from_kernel, kernel_choices
 from toinstance.utils import TAB20
@@ -137,12 +136,12 @@ class InstanceNrrd:
                 len(self.header["org.mitk.multilabel.segmentation.labelgroups"]) == self.array.shape[0]
             ), "Number of groups in header and array do not match."
 
-    def semantic_classes(self) -> set[str]:
+    def semantic_classes(self) -> set[int]:
         """Return all semantic classes in the nrrd file."""
         all_class_names = set()
         for groups in self.header["org.mitk.multilabel.segmentation.labelgroups"]:
             for label in groups["labels"]:
-                all_class_names.add(label["name"])
+                all_class_names.add(int(label["name"]))
 
         return all_class_names
 
@@ -161,7 +160,6 @@ class InstanceNrrd:
         semantic_map = np.sum(np.isin(self.array, instance_values), axis=0)
         return semantic_map
 
-    @lru_cache
     def get_instance_maps(self, class_id: int) -> list[np.ndarray]:
         """Return all instance maps of a specific class."""
         instance_values = self.get_instance_values_of_semantic_class(class_id)
