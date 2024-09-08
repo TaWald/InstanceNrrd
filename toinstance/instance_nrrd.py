@@ -8,7 +8,7 @@ import SimpleITK as sitk
 import tempfile
 from functools import lru_cache
 
-from toinstance.kernel_selection import get_np_arr_from_kernel, kernel_choices
+from toinstance.kernel_selection import get_kernel_from_str, get_np_arr_from_kernel, kernel_choices
 from toinstance.utils import TAB20
 from skimage import morphology as morph
 
@@ -25,11 +25,14 @@ def create_instance_map_of_semantic_map(semantic_array: np.ndarray, cc_kwargs: d
     label_connectivity: int
     dilation_kernel_radius = cc_kwargs.get("dilation_kernel_radius", 3)
     dilation_kernel = cc_kwargs.get("dilation_kernel", "ball")
-    assert dilation_kernel in get_args(kernel_choices)
+    assert dilation_kernel in get_args(
+        kernel_choices
+    ), f"Dilation kernel {dilation_kernel} must be one of the available kernel choices: {get_args(kernel_choices)}"
     label_connectivity = cc_kwargs.get("label_connectivity", 2)
     assert label_connectivity in [1, 2, 3], "Label connectivity must be 1, 2 or 3."
 
-    dilation_kernel = get_np_arr_from_kernel(dilation_kernel, radius=dilation_kernel_radius, dtype=np.uint8)
+    dk = get_kernel_from_str(dilation_kernel)
+    dilation_kernel = get_np_arr_from_kernel(dk, radius=dilation_kernel_radius, dtype=np.uint8)
 
     class_wise_instances: dict[str, list[np.ndarray]] = {}
     for unique_class_id in np.unique(semantic_array):
@@ -72,15 +75,26 @@ class InstanceNrrd:
         # Check that the header contains expected keys.
         self._verify_meta_data()
 
+    @staticmethod
+    def _serialize_header(header: dict) -> str:
+        """
+        MITK needs this serialized.
+        """
+        header["org.mitk.multilabel.segmentation.labelgroups"] = json.dumps(
+            header["org.mitk.multilabel.segmentation.labelgroups"]
+        )
+        return header
+
     def to_file(self, filepath: str | Path):
         """
         Write the instance nrrd to disk.
         Recommended to save as `.in.nrrd` file to indicate instance it being instance nrrd.\
         :param filepath: Path to save the instance nrrd.
         """
-        nrrd.write(str(filepath), self.array, self.header)
+        nrrd.write(str(filepath), self.array, self._serialize_header(self.header))
 
-    def _read_img(self, path: str | Path) -> tuple[np.ndarray, dict]:
+    @staticmethod
+    def _read_img(path: str | Path) -> tuple[np.ndarray, dict]:
         """
         Reads the image from the path and returns the array and header.
         Uses SimpleITK to read images that are not nrrd and extracts the files as if they were nrrd.
@@ -188,7 +202,25 @@ class InstanceNrrd:
                 final_arr.append(instance_map * cnt)
                 cnt += 1
         final_arr = np.stack(final_arr, axis=0)
-        header["org.mitk.multilabel.segmentation.labelgroups"] = json.dumps(lesion_header)
+        # ---------------- Set the header in accordance to MITK format --------------- #
+        header["org.mitk.multilabel.segmentation.labelgroups"] = lesion_header
+        header["type"] = "unsigned short"
+        header["dimension"] = instance_map.ndim + 1
+        header["sizes"] = [len(lesion_header)] + list(instance_map.shape)
+        space_dirs = header["space directions"]
+
+        # Check if the image header already is in.nrrd
+        if len(header["kinds"]) == instance_map.ndim:
+            # Header not in in.nrrd format, so we need to pre-pend stuff to edit general header infos.
+            if isinstance(space_dirs, np.ndarray):
+                space_dirs = space_dirs.tolist()
+            header["space directions"] = [None] + list(space_dirs)  # Make sure it's a list
+            header["kinds"] = ["vector"] + header["kinds"]
+            header["encoding"] = "gzip"  # Always or huuuuuuge images
+            header["modality"] = "org.mitk.multilabel.segmentation"
+            header["org.mitk.multilabel.segmentation.unlabeledlabellock"] = 0
+            header["org.mitk.multilabel.segmentation.version"] = 1
+
         return final_arr, header
 
     @staticmethod

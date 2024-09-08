@@ -33,9 +33,15 @@ def create_instance(
     print(f"Found {len(all_files)} files to process.")
     if not output_dir.exists():
         output_dir.mkdir(parents=True)
-    dk = get_kernel_from_str(dilation_kernel)
-    dilation_kernel = get_np_arr_from_kernel(dk, radius=dilation_kernel_radius, dtype=np.uint8)
-    return run_connected_components(all_files, output_dir, dilation_kernel, label_connectivity, processes, overwrite)
+    return run_connected_components(
+        all_files,
+        output_dir,
+        dilation_kernel=dilation_kernel,
+        dilation_radius=dilation_kernel_radius,
+        label_connectivity=label_connectivity,
+        n_processes=processes,
+        overwrite=overwrite,
+    )
 
 
 def main():
