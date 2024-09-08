@@ -85,9 +85,12 @@ class InstanceNrrd:
         """
         MITK needs this serialized.
         """
-        header["org.mitk.multilabel.segmentation.labelgroups"] = json.dumps(
-            header["org.mitk.multilabel.segmentation.labelgroups"]
-        )
+        if len(header["org.mitk.multilabel.segmentation.labelgroups"]) == 0:
+            header.pop("org.mitk.multilabel.segmentation.labelgroups")
+        else:
+            header["org.mitk.multilabel.segmentation.labelgroups"] = json.dumps(
+                header["org.mitk.multilabel.segmentation.labelgroups"]
+            )
         return header
 
     def to_file(self, filepath: str | Path):
@@ -108,13 +111,17 @@ class InstanceNrrd:
         :return: Tuple of array and header.
         """
         if str(path).endswith(".nrrd"):
-            return nrrd.read(path)
+            arr, header = nrrd.read(path)
         else:
             with tempfile.TemporaryDirectory() as temp_dir:
                 temp_path = Path(temp_dir) / "temp.nrrd"
                 sitk_image = sitk.ReadImage(path)
                 sitk.WriteImage(sitk_image, str(temp_path))
-                return nrrd.read(temp_path)
+                arr, header = nrrd.read(temp_path)
+        header["org.mitk.multilabel.segmentation.labelgroups"] = json.loads(
+            header.get("org.mitk.multilabel.segmentation.labelgroups", "[]")
+        )
+        return arr, header
 
     def _verify_meta_data(self):
         """
@@ -194,6 +201,7 @@ class InstanceNrrd:
         if "0" in classwise_bin_maps:
             # If there is no foreground, we just return an empty instance map
             final_arr = classwise_bin_maps["0"][0]
+            header["innrrd.empty"] = 1
         else:
             for class_name, instance_maps in classwise_bin_maps.items():
                 for instance_map in instance_maps:
@@ -212,6 +220,7 @@ class InstanceNrrd:
                         }
                     )
                     final_arr.append(instance_map * cnt)
+                    header["innrrd.empty"] = 0
                     cnt += 1
             final_arr = np.stack(final_arr, axis=0)
 
@@ -227,15 +236,16 @@ class InstanceNrrd:
 
         # Check if the image header already is in.nrrd
         if not header.get("innrrd", False):
-            space_dirs = header["space directions"]
-            # Header not in in.nrrd format, so we need to pre-pend stuff to edit general header infos.
-            if isinstance(space_dirs, np.ndarray):
-                space_dirs = space_dirs.tolist()
-            if header["space directions"][0] is not None:
-                header["space directions"] = [None] + list(space_dirs)  # Make sure it's a list
-            if header["kinds"][0] != "vector":
-                header["kinds"] = ["vector"] + header["kinds"]
-        header["innrrd"] = True
+            if header["innrrd.empty"] == 0:
+                space_dirs = header["space directions"]
+                # Header not in in.nrrd format, so we need to pre-pend stuff to edit general header infos.
+                if isinstance(space_dirs, np.ndarray):
+                    space_dirs = space_dirs.tolist()
+                if header["space directions"][0] is not None:
+                    header["space directions"] = [None] + list(space_dirs)  # Make sure it's a list
+                if header["kinds"][0] != "vector":
+                    header["kinds"] = ["vector"] + header["kinds"]
+            header["innrrd"] = True
 
         return final_arr, header
 
