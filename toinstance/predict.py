@@ -85,9 +85,19 @@ def main():
 
     args = parser.parse_args()
 
+    input_path: Path
+    output_path: Path
+    input_path = args.input_path
+    output_path = args.output_path
+    # Check if these are absolute or relative paths. If relative, make them absolute.
+    if not input_path.is_absolute():
+        input_path = Path.cwd() / input_path
+    if not output_path.is_absolute():
+        output_path = Path.cwd() / output_path
+
     create_instance(
-        input_path=args.input_path,
-        output_dir=args.output_path,
+        input_path=input_path,
+        output_dir=output_path,
         label_connectivity=args.label_connectivity,
         dilation_kernel=args.dilation_kernel,
         dilation_kernel_radius=args.dilation_kernel_radius,
