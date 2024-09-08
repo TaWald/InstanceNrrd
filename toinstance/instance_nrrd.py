@@ -1,6 +1,6 @@
-from inspect import getargs
 import json
 from pathlib import Path
+from typing import get_args
 
 import nrrd
 import numpy as np
@@ -17,7 +17,7 @@ def create_instance_map_of_semantic_map(semantic_array: np.ndarray, cc_kwargs: d
     f"""
     Transform a semantic map into an instance map through connected components analysis.
     :param semantic_array: Semantic map
-    :param cc_kwargs: Keyword arguments for connected components analysis. (`dilation_kernel`: {getargs(kernel_choices)}, `label_connectivity`: [1, 2, 3], `dilation_kernel_radius`: int)
+    :param cc_kwargs: Keyword arguments for connected components analysis. (`dilation_kernel`: {get_args(kernel_choices)}, `label_connectivity`: [1, 2, 3], `dilation_kernel_radius`: int)
     
     :return: Dictionary of class-wise binary instances
     """
@@ -25,7 +25,7 @@ def create_instance_map_of_semantic_map(semantic_array: np.ndarray, cc_kwargs: d
     label_connectivity: int
     dilation_kernel_radius = cc_kwargs.get("dilation_kernel_radius", 3)
     dilation_kernel = cc_kwargs.get("dilation_kernel", "ball")
-    assert dilation_kernel in getargs(kernel_choices)
+    assert dilation_kernel in get_args(kernel_choices)
     label_connectivity = cc_kwargs.get("label_connectivity", 2)
     assert label_connectivity in [1, 2, 3], "Label connectivity must be 1, 2 or 3."
 
@@ -209,7 +209,7 @@ class InstanceNrrd:
         :param semantic_map: Semantic map
         :param header: Nrrd header
         :param do_cc: Whether to perform connected components analysis -- Otherwise whole semantic map is considered one instance.
-        :param cc_kwargs: Keyword arguments for connected components analysis. (`dilation_kernel`: {getargs(kernel_choices)}, `label_connectivity`: [1, 2, 3], `dilation_kernel_radius`: int)
+        :param cc_kwargs: Keyword arguments for connected components analysis. (`dilation_kernel`: {get_args(kernel_choices)}, `label_connectivity`: [1, 2, 3], `dilation_kernel_radius`: int)
         """
         instance_dict: dict[str, list[np.ndarray]]
         if do_cc:
@@ -229,7 +229,7 @@ class InstanceNrrd:
 
         :param semantic_img_path: Path to the semantic image.
         :param do_cc: Whether to perform connected components analysis -- Otherwise whole semantic map is considered one instance.
-        :param cc_kwargs: Keyword arguments for connected components analysis. (`dilation_kernel`: {getargs(kernel_choices)}, `label_connectivity`: [1, 2, 3], `dilation_kernel_radius`: int)
+        :param cc_kwargs: Keyword arguments for connected components analysis. (`dilation_kernel`: {get_args(kernel_choices)}, `label_connectivity`: [1, 2, 3], `dilation_kernel_radius`: int)
         """
         semantic_array, header = InstanceNrrd._read_img(semantic_img_path)
         if do_cc:
