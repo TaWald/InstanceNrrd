@@ -200,7 +200,7 @@ class InstanceNrrd:
         # Indicator that there is no foreground at all
         if 0 in classwise_bin_maps:
             # If there is no foreground, we just return an empty instance map
-            final_arr = classwise_bin_maps["0"][0]
+            final_arr = classwise_bin_maps[0][0]
             header["innrrd.empty"] = 1
         else:
             for class_id, instance_maps in classwise_bin_maps.items():
