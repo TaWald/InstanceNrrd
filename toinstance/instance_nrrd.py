@@ -189,6 +189,9 @@ class InstanceNrrd:
         self._update_array(instance_dict)
 
     @staticmethod
+    def _update_header_to_innrd(header: dict) -> dict:
+
+    @staticmethod
     def _arr_header_update_from_binmaps(
         classwise_bin_maps: dict[int, list[np.ndarray]], header: dict
     ) -> tuple[np.ndarray, dict]:
@@ -223,7 +226,7 @@ class InstanceNrrd:
                     header["innrrd.empty"] = 0
                     cnt += 1
             final_arr = np.stack(final_arr, axis=0)
-
+        final_arr = final_arr.astype(np.uint16)
         # ---------------- Set the header in accordance to MITK format --------------- #
         header["org.mitk.multilabel.segmentation.labelgroups"] = lesion_header
         header["type"] = "unsigned short"
