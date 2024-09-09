@@ -189,9 +189,6 @@ class InstanceNrrd:
         self._update_array(instance_dict)
 
     @staticmethod
-    def _update_header_to_innrd(header: dict) -> dict:
-
-    @staticmethod
     def _arr_header_update_from_binmaps(
         classwise_bin_maps: dict[int, list[np.ndarray]], header: dict
     ) -> tuple[np.ndarray, dict]:
