@@ -287,7 +287,7 @@ class InstanceNrrd:
         :param header: Nrrd header
         :param class_name: Class name all instances belong to.
         """
-        bin_maps = [(instance_map == i).astype(np.uint16) for i in np.unique(instance_map)]
+        bin_maps = [(instance_map == i).astype(np.uint16) for i in np.unique(instance_map) if i != 0]
         return InstanceNrrd.from_binary_instance_maps({class_name: bin_maps}, header)
 
     @staticmethod
