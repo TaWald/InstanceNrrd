@@ -162,6 +162,21 @@ class InstanceNrrd:
         semantic_map = np.sum(np.isin(self.array, instance_values), axis=0)
         return semantic_map
 
+    def get_vanilla_header(self) -> dict:
+        """
+        Return the header without the MITK specific keys.
+        """
+        vanilla_header = self.header.copy()
+        vanilla_header.pop("org.mitk.multilabel.segmentation.labelgroups")
+        if vanilla_header["innrrd.empty"] == 0:
+            vanilla_header["space directions"] = vanilla_header["space directions"][1:]
+            vanilla_header["kinds"] = vanilla_header["kinds"][1:]
+            vanilla_header["dimension"] -= 1
+        vanilla_header.pop("innrrd.empty")
+        vanilla_header.pop("org.mitk.multilabel.segmentation.version")
+        vanilla_header.pop("org.mitk.multilabel.segmentation.unlabeledlabellock")
+        return vanilla_header
+
     def get_instance_maps(self, class_id: int) -> list[np.ndarray]:
         """Return all instance maps of a specific class."""
         instance_values = self.get_instance_values_of_semantic_class(class_id)
