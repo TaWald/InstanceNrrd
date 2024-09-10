@@ -30,6 +30,6 @@ def get_np_arr_from_kernel(
     Takes the Kernel ENUM containing functions and creates the actual numpy kernel.
     This numpy kernel will be used for the connected components or the dilation.
     """
-    if kernel is None:
+    if kernel is None or radius == 0:
         return None
     return kernel(radius, dtype)
