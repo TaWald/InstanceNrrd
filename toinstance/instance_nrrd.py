@@ -171,8 +171,10 @@ class InstanceNrrd:
         if vanilla_header["innrrd.empty"] == 0:
             vanilla_header["space directions"] = vanilla_header["space directions"][1:]
             vanilla_header["kinds"] = vanilla_header["kinds"][1:]
+            vanilla_header["sizes"] = vanilla_header["sizes"][1:]
             vanilla_header["dimension"] -= 1
         vanilla_header.pop("innrrd.empty")
+        vanilla_header.pop("innrrd")
         vanilla_header.pop("org.mitk.multilabel.segmentation.version")
         vanilla_header.pop("org.mitk.multilabel.segmentation.unlabeledlabellock")
         return vanilla_header
@@ -271,7 +273,7 @@ class InstanceNrrd:
         """
         final_arr, header = InstanceNrrd._arr_header_update_from_binmaps(instance_dict, header)
         return InstanceNrrd(final_arr, header)
-
+    
     @staticmethod
     def from_semantic_map(
         semantic_map: np.ndarray, header: dict, do_cc: bool = False, cc_kwargs: dict = None
@@ -290,7 +292,9 @@ class InstanceNrrd:
         else:
             instance_dict = {}
             for class_id in np.unique(semantic_map):
-                instance_dict[int(class_id)] = [semantic_map == class_id]
+                if class_id == 0:
+                    continue
+                instance_dict[int(class_id)] = [np.where(semantic_map == class_id, 1, 0).astype(np.uint16)]
         return InstanceNrrd.from_binary_instance_maps(instance_dict, header)
 
     @staticmethod
@@ -322,6 +326,18 @@ class InstanceNrrd:
             return InstanceNrrd.from_binary_instance_maps(instance_dict, header)
         else:
             return InstanceNrrd.from_semantic_map(semantic_array, header)
+
+    def map_semantic_classes(self, semantic_class_map: dict[int, int]):
+        """
+        Map the semantic classes to new classes.
+        Results in new
+
+        :param semantic_class_map: Dictionary mapping old class ids: new class ids.
+        """
+        # We just need to update the header, the array remains the same.
+        for groups in self.header["org.mitk.multilabel.segmentation.labelgroups"]:
+            for label in groups["labels"]:
+                label["name"] = f"{int(semantic_class_map[int(label["name"])])}"
 
     @staticmethod
     def from_innrrd(filepath: str | Path) -> "InstanceNrrd":
