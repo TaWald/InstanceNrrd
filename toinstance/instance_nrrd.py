@@ -133,7 +133,7 @@ class InstanceNrrd:
         assert (
             "org.mitk.multilabel.segmentation.labelgroups" in self.header
         ), "org.mitk.multilabel.segmentation.labelgroups"
-        if len(self.header["org.mitk.multilabel.segmentation.labelgroups"]) != 0:
+        if len(self.header["org.mitk.multilabel.segmentation.labelgroups"]) > 1:
             assert (
                 len(self.header["org.mitk.multilabel.segmentation.labelgroups"]) == self.array.shape[0]
             ), "Number of groups in header and array do not match."
@@ -206,8 +206,27 @@ class InstanceNrrd:
         self._update_array(instance_dict)
 
     @staticmethod
+    def clean_header(header: dict) -> dict:
+        """
+        Clean the header of the instance map.
+        """
+        header.pop("org.mitk.multilabel.segmentation.labelgroups")
+        header.pop("org.mitk.multilabel.segmentation.version")
+        header.pop("org.mitk.multilabel.segmentation.unlabeledlabellock")
+        header.pop("innrrd.empty")
+        header.pop("innrrd")
+
+        dims = header["kinds"]
+        if dims[0] == "vector":
+            header["kinds"] = dims[1:]
+            header["space directions"] = header["space directions"][1:]
+            header["sizes"] = header["sizes"][1:]
+            header["dimension"] -= 1
+        return header 
+
+    @staticmethod
     def _arr_header_update_from_binmaps(
-        classwise_bin_maps: dict[int, list[np.ndarray]], header: dict
+        classwise_bin_maps: dict[int, list[np.ndarray]], header: dict, maps_mutually_exclusive: bool = False
     ) -> tuple[np.ndarray, dict]:
         """Create an np.ndarray and an mitk compatible header from the instance maps."""
         final_arr = []
@@ -239,7 +258,15 @@ class InstanceNrrd:
                     final_arr.append(instance_map * cnt)
                     header["innrrd.empty"] = 0
                     cnt += 1
-            final_arr = np.stack(final_arr, axis=0)
+            if maps_mutually_exclusive:
+                # If the maps are mutually exclusive we can save everything in the first dimension
+                final_arr = np.sum(final_arr, axis=0)
+                new_lesion_header = {"labels": []}
+                for group in lesion_header:
+                    new_lesion_header["labels"].extend(group["labels"])
+                lesion_header = [new_lesion_header]
+            else:
+                final_arr = np.stack(final_arr, axis=0)
         final_arr = final_arr.astype(np.uint16)
         # ---------------- Set the header in accordance to MITK format --------------- #
         header["org.mitk.multilabel.segmentation.labelgroups"] = lesion_header
@@ -256,22 +283,24 @@ class InstanceNrrd:
             if header["innrrd.empty"] == 0:
                 space_dirs = header["space directions"]
                 # Header not in in.nrrd format, so we need to pre-pend stuff to edit general header infos.
-                if isinstance(space_dirs, np.ndarray):
-                    space_dirs = space_dirs.tolist()
-                if header["space directions"][0] is not None:
-                    header["space directions"] = [None] + list(space_dirs)  # Make sure it's a list
-                if header["kinds"][0] != "vector":
-                    header["kinds"] = ["vector"] + header["kinds"]
+                if len(final_arr.shape) > 3:
+                    if isinstance(space_dirs, np.ndarray):
+                        space_dirs = space_dirs.tolist()
+                    if header["space directions"][0] is not None:
+                        header["space directions"] = [None] + list(space_dirs)  # Make sure it's a list
+                    if header["kinds"][0] != "vector":
+                        header["kinds"] = ["vector"] + header["kinds"]
             header["innrrd"] = True
 
         return final_arr, header
 
     @staticmethod
-    def from_binary_instance_maps(instance_dict: dict[int, list[np.ndarray]], header: dict) -> "InstanceNrrd":
+    def from_binary_instance_maps(instance_dict: dict[int, list[np.ndarray]], header: dict, maps_mutually_exclusive: bool = False) -> "InstanceNrrd":
         """
         Creates an InstanceNrrd object from a dictionary from a dictionary holding all instances for each semantic class.
         """
-        final_arr, header = InstanceNrrd._arr_header_update_from_binmaps(instance_dict, header)
+        header = InstanceNrrd.clean_header(header)
+        final_arr, header = InstanceNrrd._arr_header_update_from_binmaps(instance_dict, header, maps_mutually_exclusive)
         return InstanceNrrd(final_arr, header)
     
     @staticmethod
@@ -286,6 +315,7 @@ class InstanceNrrd:
         :param do_cc: Whether to perform connected components analysis -- Otherwise each value is one instance..
         :param cc_kwargs: Keyword arguments for connected components analysis. (`dilation_kernel`: {get_args(kernel_choices)}, `label_connectivity`: [1, 2, 3], `dilation_kernel_radius`: int)
         """
+        header = InstanceNrrd.clean_header(header)
         instance_dict: dict[int, list[np.ndarray]]
         if do_cc:
             instance_dict = create_instance_map_of_semantic_map(semantic_map, cc_kwargs)
@@ -295,7 +325,7 @@ class InstanceNrrd:
                 if class_id == 0:
                     continue
                 instance_dict[int(class_id)] = [np.where(semantic_map == class_id, 1, 0).astype(np.uint16)]
-        return InstanceNrrd.from_binary_instance_maps(instance_dict, header)
+        return InstanceNrrd.from_binary_instance_maps(instance_dict, header, maps_mutually_exclusive=True)
 
     @staticmethod
     def from_instance_map(instance_map: np.ndarray, header: dict, class_name: str) -> "InstanceNrrd":
@@ -306,6 +336,7 @@ class InstanceNrrd:
         :param header: Nrrd header
         :param class_name: Class name all instances belong to.
         """
+        header = InstanceNrrd.clean_header(header)
         bin_maps = [(instance_map == i).astype(np.uint16) for i in np.unique(instance_map) if i != 0]
         return InstanceNrrd.from_binary_instance_maps({class_name: bin_maps}, header)
 
@@ -321,6 +352,7 @@ class InstanceNrrd:
         :param cc_kwargs: Keyword arguments for connected components analysis. (`dilation_kernel`: {get_args(kernel_choices)}, `label_connectivity`: [1, 2, 3], `dilation_kernel_radius`: int)
         """
         semantic_array, header = InstanceNrrd._read_img(semantic_img_path)
+        header = InstanceNrrd.clean_header(header)
         if do_cc:
             instance_dict = create_instance_map_of_semantic_map(semantic_array, cc_kwargs)
             return InstanceNrrd.from_binary_instance_maps(instance_dict, header)
