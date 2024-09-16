@@ -210,11 +210,16 @@ class InstanceNrrd:
         """
         Clean the header of the instance map.
         """
-        header.pop("org.mitk.multilabel.segmentation.labelgroups")
-        header.pop("org.mitk.multilabel.segmentation.version")
-        header.pop("org.mitk.multilabel.segmentation.unlabeledlabellock")
-        header.pop("innrrd.empty")
-        header.pop("innrrd")
+        if "org.mitk.multilabel.segmentation.labelgroups" in header:
+            header.pop("org.mitk.multilabel.segmentation.labelgroups")
+        if "org.mitk.multilabel.segmentation.version" in header:
+            header.pop("org.mitk.multilabel.segmentation.version")
+        if "org.mitk.multilabel.segmentation.unlabeledlabellock" in header:
+            header.pop("org.mitk.multilabel.segmentation.unlabeledlabellock")
+        if "innrrd.empty" in header:
+            header.pop("innrrd.empty")
+        if "innrrd" in header:
+            header.pop("innrrd")
 
         dims = header["kinds"]
         if dims[0] == "vector":
