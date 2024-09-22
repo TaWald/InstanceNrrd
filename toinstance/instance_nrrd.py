@@ -229,49 +229,69 @@ class InstanceNrrd:
             header["dimension"] -= 1
         return header 
 
+
     @staticmethod
     def _arr_header_update_from_binmaps(
         classwise_bin_maps: dict[int, list[np.ndarray]], header: dict, maps_mutually_exclusive: bool = False
     ) -> tuple[np.ndarray, dict]:
         """Create an np.ndarray and an mitk compatible header from the instance maps."""
-        final_arr = []
-        lesion_header = []
-        cnt = 1
 
         # Indicator that there is no foreground at all
         if 0 in classwise_bin_maps:
             # If there is no foreground, we just return an empty instance map
             final_arr = classwise_bin_maps[0][0]
             header["innrrd.empty"] = 1
+            lesion_header = [{"labels": []}]  # Empty header
         else:
+            # Create the final array holding all instances -- Start off 4D and squeeze later if possible
+            instance_cnt = 1
+            header_groups = [{"labels": []}]
+            final_arr = np.zeros_like(list(classwise_bin_maps.values())[0][0])[None, ...]
             for class_id, instance_maps in classwise_bin_maps.items():
                 for instance_map in instance_maps:
-                    lesion_header.append(
-                        {
-                            "labels": [
-                                {
-                                    "color": {"type": "ColorProperty", "value": TAB20[(cnt - 1) % 20]},
+                    for slc_cnt in range(final_arr.shape[0]):
+                        overlaps = np.any((instance_map * final_arr[slc_cnt]) != 0)
+                        end_of_slices = slc_cnt == final_arr.shape[0] - 1
+
+                        if overlaps and end_of_slices:
+                            # If we are at the end of the slices and are overlapping we add a new slice
+                            #   Then we save the isntance in this new slice and go to next instance map
+                            final_arr = np.concatenate([final_arr, np.zeros_like(final_arr[0])[None, ...]], axis=0)
+                            header_groups.append({"labels": [{
+                                    "color": {"type": "ColorProperty", "value": TAB20[(instance_cnt - 1) % 20]},
                                     "locked": True,
                                     "name": f"{int(class_id)}",
                                     "opacity": 0.6,
-                                    "value": cnt,
+                                    "value": instance_cnt,
                                     "visible": True,
-                                }
-                            ]
-                        }
-                    )
+                                }]})
+                            final_arr[slc_cnt + 1] += instance_map * instance_cnt
+                            instance_cnt += 1
+                            break
+                        elif overlaps:
+                            # If we have overlap we check if there is room in the next slice
+                            continue
+                        else:
+                            # If there is no overlap, we add the instance to the current label group
+                            #    and go to the next instance map
+                            final_arr[slc_cnt] += instance_map * instance_cnt
+                            header_groups[slc_cnt]["labels"].append({
+                                    "color": {"type": "ColorProperty", "value": TAB20[(instance_cnt - 1) % 20]},
+                                    "locked": True,
+                                    "name": f"{int(class_id)}",
+                                    "opacity": 0.6,
+                                    "value": instance_cnt,
+                                    "visible": True,
+                                })
+                            instance_cnt += 1
+                            break
+
                     final_arr.append(instance_map * cnt)
                     header["innrrd.empty"] = 0
                     cnt += 1
-            if maps_mutually_exclusive:
-                # If the maps are mutually exclusive we can save everything in the first dimension
-                final_arr = np.sum(final_arr, axis=0)
-                new_lesion_header = {"labels": []}
-                for group in lesion_header:
-                    new_lesion_header["labels"].extend(group["labels"])
-                lesion_header = [new_lesion_header]
-            else:
-                final_arr = np.stack(final_arr, axis=0)
+            if final_arr.shape[0] == 1:
+                final_arr = final_arr[0]
+                
         final_arr = final_arr.astype(np.uint16)
         # ---------------- Set the header in accordance to MITK format --------------- #
         header["org.mitk.multilabel.segmentation.labelgroups"] = lesion_header
@@ -298,6 +318,76 @@ class InstanceNrrd:
             header["innrrd"] = True
 
         return final_arr, header
+
+    # @staticmethod
+    # def _arr_header_update_from_binmaps(
+    #     classwise_bin_maps: dict[int, list[np.ndarray]], header: dict, maps_mutually_exclusive: bool = False
+    # ) -> tuple[np.ndarray, dict]:
+    #     """Create an np.ndarray and an mitk compatible header from the instance maps."""
+    #     final_arr = []
+    #     lesion_header = []
+    #     cnt = 1
+
+    #     # Indicator that there is no foreground at all
+    #     if 0 in classwise_bin_maps:
+    #         # If there is no foreground, we just return an empty instance map
+    #         final_arr = classwise_bin_maps[0][0]
+    #         header["innrrd.empty"] = 1
+    #     else:
+    #         for class_id, instance_maps in classwise_bin_maps.items():
+    #             for instance_map in instance_maps:
+    #                 lesion_header.append(
+    #                     {
+    #                         "labels": [
+    #                             {
+    #                                 "color": {"type": "ColorProperty", "value": TAB20[(cnt - 1) % 20]},
+    #                                 "locked": True,
+    #                                 "name": f"{int(class_id)}",
+    #                                 "opacity": 0.6,
+    #                                 "value": cnt,
+    #                                 "visible": True,
+    #                             }
+    #                         ]
+    #                     }
+    #                 )
+    #                 final_arr.append(instance_map * cnt)
+    #                 header["innrrd.empty"] = 0
+    #                 cnt += 1
+    #         if maps_mutually_exclusive:
+    #             # If the maps are mutually exclusive we can save everything in the first dimension
+    #             final_arr = np.sum(final_arr, axis=0)
+    #             new_lesion_header = {"labels": []}
+    #             for group in lesion_header:
+    #                 new_lesion_header["labels"].extend(group["labels"])
+    #             lesion_header = [new_lesion_header]
+    #         else:
+    #             final_arr = np.stack(final_arr, axis=0)
+    #     final_arr = final_arr.astype(np.uint16)
+    #     # ---------------- Set the header in accordance to MITK format --------------- #
+    #     header["org.mitk.multilabel.segmentation.labelgroups"] = lesion_header
+    #     header["type"] = "unsigned short"
+    #     header["encoding"] = "gzip"
+    #     header["modality"] = "org.mitk.multilabel.segmentation"
+    #     header["sizes"] = list(final_arr.shape)
+    #     header["dimension"] = final_arr.ndim
+    #     header["org.mitk.multilabel.segmentation.unlabeledlabellock"] = 0
+    #     header["org.mitk.multilabel.segmentation.version"] = 1
+
+    #     # Check if the image header already is in.nrrd
+    #     if not header.get("innrrd", False):
+    #         if header["innrrd.empty"] == 0:
+    #             space_dirs = header["space directions"]
+    #             # Header not in in.nrrd format, so we need to pre-pend stuff to edit general header infos.
+    #             if len(final_arr.shape) > 3:
+    #                 if isinstance(space_dirs, np.ndarray):
+    #                     space_dirs = space_dirs.tolist()
+    #                 if header["space directions"][0] is not None:
+    #                     header["space directions"] = [None] + list(space_dirs)  # Make sure it's a list
+    #                 if header["kinds"][0] != "vector":
+    #                     header["kinds"] = ["vector"] + header["kinds"]
+    #         header["innrrd"] = True
+
+    #     return final_arr, header
 
     @staticmethod
     def from_binary_instance_maps(instance_dict: dict[int, list[np.ndarray]], header: dict, maps_mutually_exclusive: bool = False) -> "InstanceNrrd":
