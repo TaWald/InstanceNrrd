@@ -342,7 +342,11 @@ class InstanceNrrd:
         :param class_name: Class name all instances belong to.
         """
         header = InstanceNrrd.clean_header(header)
-        bin_maps = [(instance_map == i).astype(np.uint16) for i in np.unique(instance_map) if i != 0]
+        if np.any(instance_map != 0):
+            bin_maps = [(instance_map == i).astype(np.uint16) for i in np.unique(instance_map) if i != 0]
+        else:
+            bin_maps = [np.zeros_like(instance_map)]
+            class_name = 0
         return InstanceNrrd.from_binary_instance_maps({class_name: bin_maps}, header)
 
     @staticmethod
