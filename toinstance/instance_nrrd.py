@@ -182,7 +182,10 @@ class InstanceNrrd:
     def get_instance_maps(self, class_id: int) -> list[np.ndarray]:
         """Return all instance maps of a specific class."""
         instance_values = self.get_instance_values_of_semantic_class(class_id)
-        instance_maps = [np.sum(self.array == iv, axis=0, dtype=np.uint16) for iv in instance_values]
+        if self.array.shape[0] == 4:
+            instance_maps = [np.sum(self.array == iv, axis=0, dtype=np.uint16) for iv in instance_values]
+        else:
+            instance_maps = [np.where(self.array == iv, 1 ,0).astype(np.uint16) for iv in instance_values]
         return instance_maps
 
     def get_semantic_instance_maps(self) -> dict[int, list[np.ndarray]]:
@@ -239,11 +242,12 @@ class InstanceNrrd:
         # Indicator that there is no foreground at all
         if 0 in classwise_bin_maps:
             # If there is no foreground, we just return an empty instance map
-            final_arr = classwise_bin_maps[0][0]
             header["innrrd.empty"] = 1
-            lesion_header = [{"labels": []}]  # Empty header
+            final_arr = classwise_bin_maps[0][0]
+            header_groups = [{"labels": []}]  # Empty header
         else:
             # Create the final array holding all instances -- Start off 4D and squeeze later if possible
+            header["innrrd.empty"] = 0
             instance_cnt = 1
             header_groups = [{"labels": []}]
             final_arr = np.zeros_like(list(classwise_bin_maps.values())[0][0])[None, ...]
@@ -286,15 +290,13 @@ class InstanceNrrd:
                             instance_cnt += 1
                             break
 
-                    final_arr.append(instance_map * cnt)
-                    header["innrrd.empty"] = 0
-                    cnt += 1
+                    
             if final_arr.shape[0] == 1:
                 final_arr = final_arr[0]
-                
+
         final_arr = final_arr.astype(np.uint16)
         # ---------------- Set the header in accordance to MITK format --------------- #
-        header["org.mitk.multilabel.segmentation.labelgroups"] = lesion_header
+        header["org.mitk.multilabel.segmentation.labelgroups"] = header_groups
         header["type"] = "unsigned short"
         header["encoding"] = "gzip"
         header["modality"] = "org.mitk.multilabel.segmentation"
