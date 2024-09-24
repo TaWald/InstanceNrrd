@@ -185,7 +185,7 @@ class InstanceNrrd:
         if len(self.array.shape) == 4:
             instance_maps = [np.sum(self.array == iv, axis=0, dtype=np.uint16) for iv in instance_values]
         else:
-            instance_maps = [np.where(self.array == iv, 1 ,0).astype(np.uint16) for iv in instance_values]
+            instance_maps = [np.where(self.array == iv, 1, 0).astype(np.uint16) for iv in instance_values]
         return instance_maps
 
     def get_semantic_instance_maps(self) -> dict[int, list[np.ndarray]]:
@@ -230,8 +230,7 @@ class InstanceNrrd:
             header["space directions"] = header["space directions"][1:]
             header["sizes"] = header["sizes"][1:]
             header["dimension"] -= 1
-        return header 
-
+        return header
 
     @staticmethod
     def _arr_header_update_from_binmaps(
@@ -261,14 +260,23 @@ class InstanceNrrd:
                             # If we are at the end of the slices and are overlapping we add a new slice
                             #   Then we save the isntance in this new slice and go to next instance map
                             final_arr = np.concatenate([final_arr, np.zeros_like(final_arr[0])[None, ...]], axis=0)
-                            header_groups.append({"labels": [{
-                                    "color": {"type": "ColorProperty", "value": TAB20[(instance_cnt - 1) % 20]},
-                                    "locked": True,
-                                    "name": f"{int(class_id)}",
-                                    "opacity": 0.6,
-                                    "value": instance_cnt,
-                                    "visible": True,
-                                }]})
+                            header_groups.append(
+                                {
+                                    "labels": [
+                                        {
+                                            "color": {
+                                                "type": "ColorProperty",
+                                                "value": TAB20[(instance_cnt - 1) % 20],
+                                            },
+                                            "locked": True,
+                                            "name": f"{int(class_id)}",
+                                            "opacity": 0.6,
+                                            "value": instance_cnt,
+                                            "visible": True,
+                                        }
+                                    ]
+                                }
+                            )
                             final_arr[slc_cnt + 1] += instance_map * instance_cnt
                             instance_cnt += 1
                             break
@@ -279,18 +287,19 @@ class InstanceNrrd:
                             # If there is no overlap, we add the instance to the current label group
                             #    and go to the next instance map
                             final_arr[slc_cnt] += instance_map * instance_cnt
-                            header_groups[slc_cnt]["labels"].append({
+                            header_groups[slc_cnt]["labels"].append(
+                                {
                                     "color": {"type": "ColorProperty", "value": TAB20[(instance_cnt - 1) % 20]},
                                     "locked": True,
                                     "name": f"{int(class_id)}",
                                     "opacity": 0.6,
                                     "value": instance_cnt,
                                     "visible": True,
-                                })
+                                }
+                            )
                             instance_cnt += 1
                             break
 
-                    
             if final_arr.shape[0] == 1:
                 final_arr = final_arr[0]
 
@@ -392,14 +401,18 @@ class InstanceNrrd:
     #     return final_arr, header
 
     @staticmethod
-    def from_binary_instance_maps(instance_dict: dict[int, list[np.ndarray]], header: dict, maps_mutually_exclusive: bool = False) -> "InstanceNrrd":
+    def from_binary_instance_maps(
+        instance_dict: dict[int, list[np.ndarray]], header: dict, maps_mutually_exclusive: bool = False
+    ) -> "InstanceNrrd":
         """
         Creates an InstanceNrrd object from a dictionary from a dictionary holding all instances for each semantic class.
         """
         header = InstanceNrrd.clean_header(header)
-        final_arr, header = InstanceNrrd._arr_header_update_from_binmaps(instance_dict, header, maps_mutually_exclusive)
+        final_arr, header = InstanceNrrd._arr_header_update_from_binmaps(
+            instance_dict, header, maps_mutually_exclusive
+        )
         return InstanceNrrd(final_arr, header)
-    
+
     @staticmethod
     def from_semantic_map(
         semantic_map: np.ndarray, header: dict, do_cc: bool = False, cc_kwargs: dict = None
@@ -471,7 +484,7 @@ class InstanceNrrd:
         # We just need to update the header, the array remains the same.
         for groups in self.header["org.mitk.multilabel.segmentation.labelgroups"]:
             for label in groups["labels"]:
-                label["name"] = f"{int(semantic_class_map[int(label["name"])])}"
+                label["name"] = f"{int(semantic_class_map[int(label['name'])])}"
 
     @staticmethod
     def from_innrrd(filepath: str | Path) -> "InstanceNrrd":
