@@ -182,7 +182,7 @@ class InstanceNrrd:
     def get_instance_maps(self, class_id: int) -> list[np.ndarray]:
         """Return all instance maps of a specific class."""
         instance_values = self.get_instance_values_of_semantic_class(class_id)
-        if self.array.shape[0] == 4:
+        if len(self.array.shape) == 4:
             instance_maps = [np.sum(self.array == iv, axis=0, dtype=np.uint16) for iv in instance_values]
         else:
             instance_maps = [np.where(self.array == iv, 1 ,0).astype(np.uint16) for iv in instance_values]
