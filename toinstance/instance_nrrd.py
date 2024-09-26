@@ -232,6 +232,117 @@ class InstanceNrrd:
             header["dimension"] -= 1
         return header
 
+    def _get_max_header_index(self) -> int:
+        header = self.header["org.mitk.multilabel.segmentation.labelgroups"]
+        max_index = 0
+        for header_group in header:
+            for label in header_group["labels"]:
+                max_index = max(max_index, label["value"])
+        return max_index
+
+    def add_maps(self, instance_maps: dict[int, list[np.ndarray]]) -> None:
+        """Add an instance map to the nrrd file."""
+
+        if len(instance_map) == 0:
+            return  # Nothing to add
+        self.array.setflags(write=True)
+        final_arr = self.array
+        header_groups = self.header["org.mitk.multilabel.segmentation.labelgroups"]
+        max_index = self._get_max_header_index()
+
+        # Make sure we have 4 dims
+        if len(final_arr.shape) == 3:
+            final_arr = final_arr[None, ...]
+
+        instance_cnt = max_index + 1
+
+        for class_id, instance_maps in instance_map.items():
+            for instance_map in instance_maps:
+                for slc_cnt in range(final_arr.shape[0]):
+                    overlaps = np.any((instance_map * final_arr[slc_cnt]) != 0)
+                    end_of_slices = slc_cnt == final_arr.shape[0] - 1
+                    if overlaps and end_of_slices:
+                        # If we are at the end of the slices and are overlapping we add a new slice
+                        #   Then we save the isntance in this new slice and go to next instance map
+                        final_arr = np.concatenate([final_arr, np.zeros_like(final_arr[0])[None, ...]], axis=0)
+                        header_groups.append(
+                            {
+                                "labels": [
+                                    {
+                                        "color": {
+                                            "type": "ColorProperty",
+                                            "value": TAB20[(instance_cnt - 1) % 20],
+                                        },
+                                        "locked": True,
+                                        "name": f"{int(class_id)}",
+                                        "opacity": 0.6,
+                                        "value": instance_cnt,
+                                        "visible": True,
+                                    }
+                                ]
+                            }
+                        )
+                        final_arr[slc_cnt + 1] += instance_map * instance_cnt
+                        instance_cnt += 1
+                        break
+                    elif overlaps:
+                        # If we have overlap we check if there is room in the next slice
+                        continue
+                    else:
+                        # If there is no overlap, we add the instance to the current label group
+                        #    and go to the next instance map
+                        final_arr[slc_cnt] += instance_map * instance_cnt
+                        header_groups[slc_cnt]["labels"].append(
+                            {
+                                "color": {"type": "ColorProperty", "value": TAB20[(instance_cnt - 1) % 20]},
+                                "locked": True,
+                                "name": f"{int(class_id)}",
+                                "opacity": 0.6,
+                                "value": instance_cnt,
+                                "visible": True,
+                            }
+                        )
+                        instance_cnt += 1
+                        break
+        if final_arr.shape[0] == 1:
+            final_arr = final_arr[0]  # Make it 3D again.
+        self.array = final_arr.astype(np.uint16)
+        self.array.setflags(write=False)
+
+        self.header["org.mitk.multilabel.segmentation.labelgroups"] = header_groups
+
+        self.header = self._adapt_header_to_array(self.header, self.array)
+
+        return
+
+    @staticmethod
+    def _adapt_header_to_array(header, array):
+        """
+        Make sure the header is in accordance with the array dimensions and shape.
+        """
+        header["type"] = "unsigned short"
+        header["encoding"] = "gzip"
+        header["modality"] = "org.mitk.multilabel.segmentation"
+        header["sizes"] = list(array.shape)
+        header["dimension"] = array.ndim
+        header["org.mitk.multilabel.segmentation.unlabeledlabellock"] = 0
+        header["org.mitk.multilabel.segmentation.version"] = 1
+
+        # Check if the image header already is in.nrrd
+        if not header.get("innrrd", False):
+            if header["innrrd.empty"] == 0:
+                space_dirs = header["space directions"]
+                # Header not in in.nrrd format, so we need to pre-pend stuff to edit general header infos.
+                if len(array.shape) > 3:
+                    if isinstance(space_dirs, np.ndarray):
+                        space_dirs = space_dirs.tolist()
+                    if header["space directions"][0] is not None:
+                        header["space directions"] = [None] + list(space_dirs)  # Make sure it's a list
+                    if header["kinds"][0] != "vector":
+                        header["kinds"] = ["vector"] + header["kinds"]
+            header["innrrd"] = True
+        return header
+
     @staticmethod
     def _arr_header_update_from_binmaps(
         classwise_bin_maps: dict[int, list[np.ndarray]], header: dict, maps_mutually_exclusive: bool = False
@@ -306,27 +417,7 @@ class InstanceNrrd:
         final_arr = final_arr.astype(np.uint16)
         # ---------------- Set the header in accordance to MITK format --------------- #
         header["org.mitk.multilabel.segmentation.labelgroups"] = header_groups
-        header["type"] = "unsigned short"
-        header["encoding"] = "gzip"
-        header["modality"] = "org.mitk.multilabel.segmentation"
-        header["sizes"] = list(final_arr.shape)
-        header["dimension"] = final_arr.ndim
-        header["org.mitk.multilabel.segmentation.unlabeledlabellock"] = 0
-        header["org.mitk.multilabel.segmentation.version"] = 1
-
-        # Check if the image header already is in.nrrd
-        if not header.get("innrrd", False):
-            if header["innrrd.empty"] == 0:
-                space_dirs = header["space directions"]
-                # Header not in in.nrrd format, so we need to pre-pend stuff to edit general header infos.
-                if len(final_arr.shape) > 3:
-                    if isinstance(space_dirs, np.ndarray):
-                        space_dirs = space_dirs.tolist()
-                    if header["space directions"][0] is not None:
-                        header["space directions"] = [None] + list(space_dirs)  # Make sure it's a list
-                    if header["kinds"][0] != "vector":
-                        header["kinds"] = ["vector"] + header["kinds"]
-            header["innrrd"] = True
+        header = InstanceNrrd._adapt_header_to_array(header, final_arr)
 
         return final_arr, header
 
