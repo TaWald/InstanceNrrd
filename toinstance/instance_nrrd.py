@@ -328,19 +328,26 @@ class InstanceNrrd:
         header["org.mitk.multilabel.segmentation.unlabeledlabellock"] = 0
         header["org.mitk.multilabel.segmentation.version"] = 1
 
-        # Check if the image header already is in.nrrd
-        if not header.get("innrrd", False):
-            if header["innrrd.empty"] == 0:
-                space_dirs = header["space directions"]
-                # Header not in in.nrrd format, so we need to pre-pend stuff to edit general header infos.
-                if len(array.shape) > 3:
-                    if isinstance(space_dirs, np.ndarray):
-                        space_dirs = space_dirs.tolist()
-                    if header["space directions"][0] is not None:
-                        header["space directions"] = [None] + list(space_dirs)  # Make sure it's a list
-                    if header["kinds"][0] != "vector":
-                        header["kinds"] = ["vector"] + header["kinds"]
-            header["innrrd"] = True
+        space_dirs = header["space directions"]
+        header["innrrd"] = True
+        # If we have a 4D array, we make sure the header is 4D as well.
+
+        if len(array.shape) == 4:
+            if len(space_dirs) != 4:
+                header["space directions"] = [None] + list(space_dirs)
+            if len(header["kinds"]) != 4:
+                header["kinds"] = ["vector"] + header["kinds"]
+            if isinstance(space_dirs, np.ndarray):
+                space_dirs = space_dirs.tolist()
+
+        # This is in case we would want to remove instances from the array
+        #   and the header would need to be updated back down.
+        if len(array.shape) == 3:
+            if len(space_dirs) != 3:
+                header["space directions"] = list(space_dirs)[1:]  # remove the first None
+            if len(header["kinds"]) != 3:
+                header["kinds"] = header["kinds"][1:]  # Remove the first "vector"
+
         return header
 
     @staticmethod
