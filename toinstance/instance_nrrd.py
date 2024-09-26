@@ -240,10 +240,10 @@ class InstanceNrrd:
                 max_index = max(max_index, label["value"])
         return max_index
 
-    def add_maps(self, instance_maps: dict[int, list[np.ndarray]]) -> None:
+    def add_maps(self, instance_dict: dict[int, list[np.ndarray]]) -> None:
         """Add an instance map to the nrrd file."""
 
-        if len(instance_map) == 0:
+        if len(instance_dict) == 0:
             return  # Nothing to add
         self.array.setflags(write=True)
         final_arr = self.array
@@ -256,7 +256,7 @@ class InstanceNrrd:
 
         instance_cnt = max_index + 1
 
-        for class_id, instance_maps in instance_map.items():
+        for class_id, instance_maps in instance_dict.items():
             for instance_map in instance_maps:
                 for slc_cnt in range(final_arr.shape[0]):
                     overlaps = np.any((instance_map * final_arr[slc_cnt]) != 0)
