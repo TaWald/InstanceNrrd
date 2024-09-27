@@ -282,7 +282,7 @@ class InstanceNrrd:
                                 ]
                             }
                         )
-                        final_arr[slc_cnt + 1] += instance_map * instance_cnt
+                        final_arr[slc_cnt + 1] += (instance_map * instance_cnt).astype(final_arr.dtype)
                         instance_cnt += 1
                         break
                     elif overlaps:
