@@ -291,7 +291,7 @@ class InstanceNrrd:
                     else:
                         # If there is no overlap, we add the instance to the current label group
                         #    and go to the next instance map
-                        final_arr[slc_cnt] += instance_map * instance_cnt
+                        final_arr[slc_cnt] += (instance_map * instance_cnt).astype(final_arr.dtype)
                         header_groups[slc_cnt]["labels"].append(
                             {
                                 "color": {"type": "ColorProperty", "value": TAB20[(instance_cnt - 1) % 20]},
@@ -337,8 +337,6 @@ class InstanceNrrd:
                 header["space directions"] = [None] + list(space_dirs)
             if len(header["kinds"]) != 4:
                 header["kinds"] = ["vector"] + header["kinds"]
-            if isinstance(space_dirs, np.ndarray):
-                space_dirs = space_dirs.tolist()
 
         # This is in case we would want to remove instances from the array
         #   and the header would need to be updated back down.
