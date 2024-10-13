@@ -1,27 +1,48 @@
-# ToInstance
-This is a small repo to convert your 3D semantic instance segmentations into instance masks through connected component analysis. It is meant to be used in conjunction with `nneval` which will be available soon.
-You pass a path to an image or dir containing images `<some_path>/<some_semantic_seg_file_id>.nii.gz` and
- it creates instances outputting each file into two new files:
-- `<some_path>/<some_semantic_seg_file_id>_sem.nii.gz` - The same semantic segmentation map (What it got as input) 
-- `<some_path>/<some_semantic_seg_file_id>_inst.nii.gz` - The instanced file that containing the instance labels.
-By doing so it can be easily introspected side-by-side with the semantic map in a 3D image viewer.
+# InstanceNrrd / ToInstance
+WIP: This is a small repo that contains two functionalities:
+
+1. `InstanceNrrd` - This is an image format that allows saving overlapping segmentation maps of 3D images in a format that is viewable using the [Medical Imaging ToolKit (MITK)](https://www.mitk.org/wiki/The_Medical_Imaging_Interaction_Toolkit_(MITK))  
+2. Additionally it allows converting 3D semantic segmentation maps into a instance segmentation map using connected components analysis.
+
+Currently the name of the repo and the package is `toinstance` but the main class is called `InstanceNrrd`. Naming will be changed soon.
+
+---
 
 ## Installation
 
-Either via pip or by cloning the repo and installing it locally:
+Clone this repository and install it locally:
 ```bash
 pip install toinstance
 ```
 
 ```bash
-git clone
-cd toinstance
+git clone https://github.com/TaWald/InstanceNrrd.git
+cd InstanceNrrd
 pip install -e .
 ```
+then you can use it via
 
 ## Usage
+
+There are two ways this repository can be used.
+The first is by creating using the `InstanceNrrd` class directly in python, which allows you to create, modify and save instance maps.
+
+### InstanceNrrd
+
+```python
+from toinstance import InstanceNrrd
+
+nrrd_ar, nrrd_header = nrrd.read(path_to_any_3d_image)
+# Load and convert a semantic map to instances through a connected component analysis. 
+innrrd = InstanceNrrd.from_semantic_map(nrrd_ar, nrrd_header, do_cc=True)
+# Add some other instance to it - can be overlapping
+innrrd.add_instance_map(some_bin_array, some_class_id)
+# Save the (pot. overalpping) instance maps to a file.
+innrrd.to_file("/some/target_path/instance.in.nrrd")
+```
+
 ### CLI
-You can use it from the CLI by calling the `toinstance` command:
+You can also create instance maps from semantic segmentation maps directly from the CLI by calling the `toinstance` command:
 
 ```bash
 # Convert a file or a dir to instance segmentations
@@ -36,21 +57,3 @@ Moreover you can specify the following arguments:
  - `"-f", "--force_overwrite` - Whether to force overwrite existing files -- (Boolean) specifying whether to force overwrite existing files
 
 This info can also be found by calling `toinstance --help`.
-
-### API
-If you want you can also start the conversion from within python directly:
-
-```python
-from sem2ins.predict import create_instance
-# Converts either a single or all files in a directory to instances.
-output_paths = create_instance(input_path=..., output_path= ...)
-# Output paths contains list[tuple[Path, Path]] where the first path is the semantic segmentation and the second the instance segmentation.
-```
-
-### Current Limitations
-- Currently only supports `.nii.gz` / `.nrrd` files (But can be easily extended to support more)
-- Currently only supports 3D semantic segmentation maps (But can be easily extended to support more)
-
-This is a small repo that currently only serves to keep instance creation from semantic segmentation maps simple and easy to use. It is not meant to be a full fledged library (yet) and just keeps the instance generation outside of the `nneval` repository. 
-
-If you want to extend the functionality of this, feel free to open a PR. 
