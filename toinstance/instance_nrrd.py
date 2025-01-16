@@ -334,7 +334,7 @@ class InstanceNrrd:
 
         if len(array.shape) == 4:
             if len(space_dirs) != 4:
-                header["space directions"] = [None] + list(space_dirs)
+                header["space directions"] = list([[None, None, None]]) + list(space_dirs)
             if len(header["kinds"]) != 4:
                 header["kinds"] = ["vector"] + header["kinds"]
 
